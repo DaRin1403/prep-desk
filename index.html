@@ -2681,8 +2681,36 @@ function imgDone(){ let n = 0; eachShot(it => { if (IMGS[it.id]) n++; }); return
    保存（防抖）
    ══════════════════════════════════════════════════════════ */
 let saveT = null, imgSaveT = null;
-function saveDoc(){ clearTimeout(saveT); saveT = setTimeout(() => { idbSet("doc", DOC); scheduleBackup(); }, 400); }
-function saveImgs(){ clearTimeout(imgSaveT); imgSaveT = setTimeout(() => { idbSet("imgs", IMGS); scheduleBackup(); }, 600); }
+/* ── 自动回传：把当前整份数据推给服务器，落到项目的 _收件箱\ ──
+   为什么要有：工作台数据**按 origin 分开存**（Mac 与 Windows 是两套库）。
+   有了这个，任何设备上改的东西都会自动回流到项目文件夹，
+   AI 那边就不用猜"你在哪台机器上改了什么"。
+   只在 本机 / Tailscale 网段 推；file:// 打开和公开版都不会推。 */
+let pushT = null;
+function autoPush(){
+  clearTimeout(pushT);
+  pushT = setTimeout(function(){
+    try{
+      const h = String(location.hostname || "");
+      const ok = /^127\./.test(h) || h === "localhost" || /^100\./.test(h);
+      if (!ok) return;
+      const name = "live-" + h.replace(/[^0-9a-zA-Z]/g, "-") + ".json";
+      let body;
+      try{
+        body = JSON.stringify({ device: h, at: new Date().toISOString(), doc: DOC, imgs: IMGS });
+        if (body.length > 20 * 1024 * 1024){          /* 图太多就别传图，别把通道堵死 */
+          const n = Object.keys(IMGS || {}).length;
+          body = JSON.stringify({ device: h, at: new Date().toISOString(),
+            doc: DOC, imgs: {}, imgsOmitted: n, note: "图太多未随传；图在本机 IndexedDB 与备份文件夹" });
+        }
+      }catch(e){ return; }
+      fetch("/_收/" + encodeURIComponent(name), { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: body }).catch(function(){});
+    }catch(e){}
+  }, 2500);
+}
+function saveDoc(){ clearTimeout(saveT); saveT = setTimeout(() => { idbSet("doc", DOC); scheduleBackup(); autoPush(); }, 400); }
+function saveImgs(){ clearTimeout(imgSaveT); imgSaveT = setTimeout(() => { idbSet("imgs", IMGS); scheduleBackup(); autoPush(); }, 600); }
 
 /* ══════════════════════════════════════════════════════════
    摄影机技术规格（存在 DOC.spec，跟着备份一起走）
@@ -3692,6 +3720,80 @@ function setPath(p, val){
 
 /* 把统一工程里的剧本/人物/技术挂到 DOC（DOC 里没有才挂；
    这样：① 老数据不会丢 ② 内嵌版本更新时从新版工程补齐） */
+/* ══ 换版合并：把旧文档里"用户填过的"搬回来 ══
+   原则：**绝不丢用户手填的东西**。
+     · 分镜 scenes / 规格卡 spec / version → 用新的（那是数据源生成的）
+     · 筹备 prep → 逐分区、逐字段比：旧的填过就用旧的；旧的独有分区补回来
+     · 剧本/人物/技术/简报 → 旧的非空就用旧的（多半是你在界面里改过的），
+       并在播报里说明白；新版内容随时能从项目文件重新生成，不会真丢
+   返回一句人话（写进播报条）。 */
+function mergeOldDoc(old){
+  if (!old || typeof old !== "object") return "";
+  var rep = [];
+  var filled = function(v){ return !(v == null || String(v).trim() === ""); };
+
+  /* ① 筹备：逐字段合并（出事的就是这一块） */
+  try{
+    var oSecs = (old.prep && Array.isArray(old.prep.sections)) ? old.prep.sections : [];
+    if (oSecs.length){
+      if (DOC.prep == null) DOC.prep = {};
+      if (!Array.isArray(DOC.prep.sections) || !DOC.prep.sections.length){
+        DOC.prep = JSON.parse(JSON.stringify(old.prep));
+        rep.push("筹备整块保留（" + oSecs.length + " 个部门）");
+      } else {
+        var nSecs = DOC.prep.sections, kept = 0, added = 0;
+        oSecs.forEach(function(os){
+          var ns = nSecs.find(function(s){ return s && (s.id === os.id || s.title === os.title); });
+          if (!ns){ nSecs.push(JSON.parse(JSON.stringify(os))); added++; return; }
+          (os.fields || []).forEach(function(of){
+            if (!Array.isArray(ns.fields)) ns.fields = [];
+            var nf = ns.fields.find(function(f){ return f && f.k === of.k; });
+            if (!nf){ ns.fields.push(JSON.parse(JSON.stringify(of))); added++; return; }
+            if (filled(of.v) && String(of.v) !== String(nf.v)){ nf.v = of.v; kept++; }
+          });
+          (os.tables || []).forEach(function(ot, ti){
+            if (!Array.isArray(ns.tables)) ns.tables = [];
+            if (!ns.tables[ti]){ ns.tables[ti] = JSON.parse(JSON.stringify(ot)); return; }
+            if (JSON.stringify(ot) !== JSON.stringify(ns.tables[ti])){
+              /* 旧的表格里只要有非空单元格就赢 */
+              var hasData = false;
+              (ot.rows || []).forEach(function(r){ (r || []).forEach(function(c){ if (filled(c)) hasData = true; }); });
+              if (hasData){ ns.tables[ti] = JSON.parse(JSON.stringify(ot)); kept++; }
+            }
+          });
+        });
+        rep.push("筹备合并 " + kept + " 处" + (added ? "、补回 " + added + " 项" : "") + "（" + oSecs.length + " 个部门）");
+      }
+    }
+  }catch(e){ console.warn("筹备合并失败", e); }
+
+  /* ② 剧本 / 人物 / 技术 / 简报：旧的非空优先 */
+  try{
+    if (old.script && Array.isArray(old.script.scenes) && old.script.scenes.length &&
+        JSON.stringify(old.script) !== JSON.stringify(DOC.script)){
+      DOC.script = JSON.parse(JSON.stringify(old.script)); rep.push("剧本用你改过的那份");
+    }
+  }catch(e){}
+  try{
+    if (Array.isArray(old.bios) && old.bios.length && JSON.stringify(old.bios) !== JSON.stringify(DOC.bios)){
+      DOC.bios = JSON.parse(JSON.stringify(old.bios)); rep.push("人物用你改过的那份");
+    }
+  }catch(e){}
+  try{
+    if (Array.isArray(old.tech) && old.tech.length && JSON.stringify(old.tech) !== JSON.stringify(DOC.tech)){
+      DOC.tech = JSON.parse(JSON.stringify(old.tech)); rep.push("技术用你改过的那份");
+    }
+  }catch(e){}
+  try{
+    if (old.brief && old.brief.logline && (!DOC.brief || !DOC.brief.logline)){
+      DOC.brief = JSON.parse(JSON.stringify(old.brief)); rep.push("简报保留");
+    }
+  }catch(e){}
+
+  DOC.version = Number(DEFAULT.version || DOC.version || 0);
+  return rep.length ? "　已合并：" + rep.join("、") : "";
+}
+
 function attachProject(){
   const P = (typeof PROJECT !== "undefined") ? PROJECT : null;
   if (!P) return false;
@@ -4160,16 +4262,29 @@ initSelectionObserver();
   const [doc, imgs] = await Promise.all([idbGet("doc"), idbGet("imgs")]);
   DOC  = (doc && doc.scenes && doc.scenes.length) ? doc : JSON.parse(JSON.stringify(DEFAULT));
   IMGS = imgs || {};
-  /* ★ 内嵌数据源比工作台里的新 → 自动载入新版（旧版备份在本机 IndexedDB） */
+  /* ★ 内嵌数据源比工作台里的新 → 自动载入新版
+     ⚠ 这里**绝对不能**再写成 DOC = clone(DEFAULT)！
+     原来就是那样：DEFAULT 只有 scenes+spec，一整份换掉之后，
+     你在筹备里手填的人员/拍摄规划等字段全部离开工作台
+     （2026-10-13 在 Mac 上真的丢过一次）。
+     现在的做法：换掉分镜与规格卡，剧本/人物/技术/简报从工程补，
+     **最后再把旧文档里"填过的"逐字段合并回来**。 */
   try{
     const dv = Number(DEFAULT.version || 0), cv = Number(DOC.version || 0);
     if (dv > cv){
-      await idbSet("doc_backup_v" + cv, DOC);
+      const oldDoc = JSON.parse(JSON.stringify(DOC));
+      await idbSet("doc_backup_v" + cv, oldDoc);
+      /* ① 分镜 + 规格卡 换成新版 */
       DOC = JSON.parse(JSON.stringify(DEFAULT));
+      /* ② 剧本/人物/技术/简报/规格卡 从工程补 */
+      try { attachProject(); } catch(e){ console.warn("工程挂载失败", e); }
+      /* ③ 旧文档里填过的东西合并回来 */
+      const rep = mergeOldDoc(oldDoc);
       await idbSet("doc", DOC);
       setTimeout(function(){
         aiAdd({ t: Date.now(), kind: "done",
-          text: "已自动载入新版数据源 **v" + dv + "**（原来是 v" + cv + "，旧版已备份在本机）" });
+          text: "已自动载入新版数据源 **v" + dv + "**（原来是 v" + cv + "，旧版已完整备份在本机）" +
+                (rep ? "　" + rep : "") });
       }, 900);
     }
   }catch(e){ console.warn("版本检查失败", e); }
@@ -4197,6 +4312,8 @@ initSelectionObserver();
   const first = $("#nav .navitem");
   if (first) first.classList.add("on");
   if (!doc) toast("已载入初始清单：74 镜 · 29 个★必画");
+  /* 一打开就把这台设备的当前状态回流到项目 _收件箱\（换版刚发生过也不例外） */
+  autoPush();
 })();
 </script>
 <div class="progress" id="progress"></div>
