@@ -431,17 +431,66 @@ body{
 .aibar[data-state="down"] .btn:hover{background:var(--ink); color:var(--sig)}
 .aibar[data-state="down"] .ico{color:var(--ink)}
 
-/* ④ 浅色竖向导轨（侧栏） */
+/* ④ 竖向导轨（侧栏）—— 按层次重做：L1 段标签 → L2 分组 → L3 模块 → L4 条目
+   原来「模块 / 场次 / 操作」三个标题共用一套 h4，缩进又各不相同，
+   所以看上去全是一个层级、分不出从属。 */
 .side{
-  width:254px; flex:0 0 254px;
+  width:250px; flex:0 0 250px;
   border-right:2px solid var(--ink); background:transparent;
-  padding:16px 0 60px 0;
+  padding:14px 0 60px 0;
 }
-.side h4{margin-left:14px; letter-spacing:3px; border-bottom:1px solid var(--line2); padding-bottom:6px}
-.navitem{border-left:4px solid transparent; padding:7px 12px; gap:10px}
-.navitem:hover{background:var(--sunk); color:var(--ink)}
-.navitem.on{background:var(--sig); color:var(--ink); font-weight:800; border-left-color:var(--ink)}
-.navitem.on .n, .navitem.on .p{color:var(--ink)}
+/* L1 · 段标签（模块 / 操作）—— 最重：黑底字 + 双线 */
+.side h4{
+  font:800 9.5px/1 var(--mono); letter-spacing:2.6px; text-transform:uppercase;
+  color:var(--ink); margin:0 0 8px 14px; padding-bottom:6px;
+  border-bottom:2px solid var(--ink);
+}
+.side h4+*{margin-top:0}
+/* L2 · 分组标题（创作 / 筹备 / 场次目录）—— 小一号、带短横标记、可点 */
+.rail .grp{
+  display:flex; align-items:center; gap:7px;
+  margin:14px 0 4px 14px; padding-right:14px;
+  font:800 10px/1.5 var(--mono); letter-spacing:1.8px; color:var(--ink3);
+  cursor:pointer; user-select:none;
+}
+.rail .grp:before{content:""; width:8px; height:2px; background:var(--ink3); flex:0 0 8px}
+.rail .grp:hover{color:var(--ink)}
+.rail .grp:hover:before{background:var(--sig-paper)}
+.rail .grp .cnt{margin-left:auto; font:10px/1.5 var(--mono); letter-spacing:.5px; color:var(--ink3)}
+.rail .grp.railhead:hover .cnt{color:var(--sig-paper)}
+/* L3 · 模块项（分镜 / 剧本 / 人物 / 技术 / 10 个部门）—— 选中 = 信号黄 */
+.rail .mitem{
+  display:flex; align-items:center; gap:8px; cursor:pointer;
+  padding:6px 14px 6px 27px; font-size:13px; color:var(--ink2);
+  border-left:3px solid transparent; margin-left:14px; transition:.1s;
+}
+.rail .mitem:hover{background:var(--sunk); color:var(--ink)}
+.rail .mitem.on{background:var(--sig); color:var(--ink); font-weight:800; border-left-color:var(--ink)}
+.rail .mitem .mc{margin-left:auto; font:10px/1 var(--mono); color:var(--ink3); letter-spacing:.5px}
+.rail .mitem.on .mc{color:var(--ink); font-weight:800}
+/* 「＋ 新增部门」那一行：同为 L3，但用信号黄标出来 */
+.rail .mitem.addrow{color:var(--sig-paper); font-weight:700; font-size:12px}
+.rail .mitem.addrow:hover{background:var(--sig); color:var(--ink)}
+/* L4 · 条目（场次 / 人物 / 技术条目）—— 再缩进、选中用左侧信号条而不是整块黄 */
+.rail .subitem, .rail .navitem{
+  display:flex; align-items:center; gap:8px; cursor:pointer;
+  padding:5px 14px 5px 36px; font-size:12px; color:var(--ink2);
+  border-left:3px solid transparent; margin-left:14px; transition:.1s;
+}
+.rail .subitem:hover, .rail .navitem:hover{background:var(--sunk); color:var(--ink)}
+.rail .subitem.on, .rail .navitem.on{
+  background:var(--sunk); color:var(--ink); font-weight:700; border-left-color:var(--sig);
+}
+.rail .subitem .st{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.rail .subitem .sn{margin-left:auto; font:10px/1 var(--mono); color:var(--ink3)}
+.rail .navitem .n{min-width:22px}
+.rail .navitem.on .n, .rail .navitem.on .p, .rail .subitem.on .sn{color:var(--ink)}
+.rail .navitem.full .p{color:var(--ok)}
+/* 操作提示：悬挂缩进，折行后跟正文对齐，不跟 · 对齐 */
+.railtips{color:var(--ink3); font-size:11px; padding:0 12px 0 21px;
+  line-height:1.95; letter-spacing:.2px; text-indent:-9px}
+.railtips b{color:var(--ink); font-weight:700}
+.railtips .y{color:var(--sig-paper); font-weight:700}
 
 /* ⑤ 场次头：更大的段号 + 更硬的引导线 */
 .scene-head{border-bottom:2px solid var(--ink); align-items:flex-end; gap:18px}
@@ -860,18 +909,21 @@ body{
   <div id="modnav"></div>
 
   <div id="subnav">
-    <h4 style="margin-top:20px" id="subTitle">场次</h4>
+    <div class="grp" id="subTitle">场次</div>
     <div id="nav"></div>
     <div id="subList"></div>
   </div>
 
-  <h4 style="margin-top:20px">操作</h4>
-  <div id="tips" style="color:var(--ink3);font-size:11.5px;padding:0 8px;line-height:2;letter-spacing:.4px">
-    · 点任意文字可直接改<br>
-    · <b>J / K</b> 下一镜 / 上一镜 · <b>F</b> 搜索 · <b>S</b> 只看★<br>
-    · 点图场：上传 / 拖入 / <b style="color:var(--ink)">CTRL+V</b> 粘贴<br>
-    · 点 <b style="color:var(--sig-paper)">★</b> <b style="color:var(--ink)">⚠</b> 可切标记<br>
-    · 改动自动保存在本机
+  <h4 style="margin-top:22px">操作</h4>
+  <div id="tips" class="railtips">
+    · 点任意文字直接改，自动保存<br>
+    · 存三层：本机浏览器 / 备份夹 / 项目<br>
+    · <b>J</b>/<b>K</b> 上下一镜 · <b>F</b> 搜索 · <b>S</b> 只看★<br>
+    · 图区：点开上传 / 拖入 / <b>CTRL+V</b><br>
+    · <span class="y">★</span> <b>⚠</b> 点一下切换标记<br>
+    · 筹备·技术：行尾 <b>↑↓</b> 调序 <b>✕</b> 删<br>
+    · 筹备还能 <b>＋</b> 加项 / 加表 / 加部门<br>
+    · 收藏某页：网址末尾加 <b>?view=</b>
   </div>
 </aside>
 
@@ -3869,19 +3921,24 @@ function renderModNav(){
   const isPrep = (base === "prep");
   if (isPrep) railPrepOpen = true;              // 进筹备时自动展开
   box.innerHTML = railGroups().map(function(g, gi){
-    const collapsible = (g.title === "筹备");   // 10 个部门默认收起，否则会把二级目录挤到看不见
+    const collapsible = (g.title === "筹备");   // 部门多，默认收起，否则会把下面的条目挤到看不见
     const open = collapsible ? railPrepOpen : true;
-    return '<h4' + (gi === 0 ? ' style="margin-top:0"' : '') +
-      (collapsible ? ' class="railhead" data-rail="prep" title="点一下展开／收起"' : '') + '>' +
-      g.title + (collapsible ? '<span class="railn">' + g.items.length + (open ? ' ▾' : ' ▸') + '</span>' : '') + '</h4>' +
-      (open
-        ? g.items.map(function(m){
-            var isAdd = (m.v === "#prep-add");
-            return '<div class="mitem' + (CV === m.v ? " on" : "") + '" ' +
-              (isAdd ? 'data-act="prep-add-section" style="color:var(--sig-paper);font-weight:700"' : 'data-mod="' + m.v + '"') + '>' +
-              '<span>' + esc(m.label) + '</span><span class="mc">' + m.note() + '</span></div>';
-          }).join("")
-        : '');
+    /* ★ 计数要排除「＋ 新增部门」那一行——否则会显示成 11 个部门 */
+    const real = g.items.filter(function(m){ return m.v !== "#prep-add"; });
+    const head = '<div class="grp' + (collapsible ? ' railhead' : '') + '"' +
+      (collapsible ? ' data-rail="prep" title="点一下展开／收起"' : '') + '>' +
+      esc(g.title) +
+      '<span class="cnt">' + real.length + (collapsible ? (open ? ' ▾' : ' ▸') : '') + '</span>' +
+      '</div>';
+    const body = open
+      ? g.items.map(function(m){
+          var isAdd = (m.v === "#prep-add");
+          return '<div class="mitem' + (CV === m.v ? " on" : "") + (isAdd ? " addrow" : "") + '" ' +
+            (isAdd ? 'data-act="prep-add-section"' : 'data-mod="' + m.v + '"') + '>' +
+            '<span>' + esc(m.label) + '</span><span class="mc">' + m.note() + '</span></div>';
+        }).join("")
+      : '';
+    return head + body;
   }).join("");
 }
 let railPrepOpen = false;
