@@ -50,6 +50,10 @@
   --ab:0px;       /* 实时桥播报条额外占的高度（它收起时为 0），由 JS 测量 */
   --tbh:calc(var(--tb) + var(--ab));  /* 所有 sticky 元素统一用的「顶栏总高」 */
   --hit:40px;                          /* 触屏命中直径基准 */
+  --edit-lh:1.78;                      /* ★可编辑正文的行高 = 光标高度。
+                                          光标高度跟着**行高**走（不是字号），
+                                          中文字形只占约 1em，所以行高越大光标越显长。
+                                          想再紧凑就往 1.7 调，想更松就 1.9。 */
   --dur:180ms;                         /* 直接交互（hover/active/焦点） */
   --dur-fast:120ms;                    /* 微反馈（信号条变色） */
   --dur-panel:220ms;                   /* 浮层出入 */
@@ -815,7 +819,7 @@ body{
 .vcard>.hd .del:hover{background:var(--err); border-color:var(--err); color:#fff}
 .vnote{background:var(--sunk); border-bottom:1px solid var(--line); padding:8px 14px;
   font-size:12px; color:var(--ink2); line-height:1.8; white-space:pre-wrap; outline:none}
-.vbody{padding:14px 16px; white-space:pre-wrap; outline:none; line-height:1.95; font-size:13.5px}
+.vbody{padding:14px 16px; white-space:pre-wrap; outline:none; line-height:var(--edit-lh); font-size:13.5px}
 .vnote:focus,.vbody:focus,.vkv .v:focus,.vkv .k:focus{background:var(--sig)}
 /* ★ 提示文字只在**真的空**时显示（:empty 是实时的）。
    以前用 .empty 类：那行类只在失焦时才去掉，所以打字时提示还赖在那儿，
