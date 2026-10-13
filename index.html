@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>《向上社交》· 分镜与剧本（公开快照）</title>
 <meta name="robots" content="noindex,nofollow">
 <style>
@@ -12,32 +12,48 @@
    纸与墨为主体 · 信号黄是信号 · 全直角 · 数字等宽
    ══════════════════════════════════════════════════════════ */
 :root{
-  /* 纸 / 墨 / 线 */
-  --bg:#e8e8e2;        /* 纸底 */
-  --panel:#f2f2ec;     /* 面板 */
-  --sunk:#dcddd6;      /* 沉底块 */
-  --line:#d8d9d5;      /* 细线 */
-  --line2:#b6b8b3;     /* 重线 */
-  --ink:#101110;       /* 正文 */
-  --ink2:#4a4c48;      /* 次要 */
-  --ink3:#7f827b;      /* 更次要 */
+  /* ── 纸 / 墨 / 线（与终末地主题逐值一致）── */
+  --bg:#e8e8e2;          /* 纸底（应用背景、侧栏） */
+  --panel:#f2f2ec;       /* 面板 */
+  --sunk:#dcddd6;        /* 沉底块 */
+  --overlay:#f2f2ec;     /* 浮层底（specpanel/bkpanel/qres 统一语义） */
+  --line:#d8d9d5;        /* 细线 */
+  --line2:#b6b8b3;       /* 重线 */
+  --ink:#101110;         /* 正文墨 */
+  --ink2:#4a4c48;        /* 次要文字 */
+  --ink3:#7f827b;        /* 弱化文字 */
 
-  /* 信号黄（只用于「需要被看见的那一处」） */
+  /* ── 信号黄 · 派生档 ──
+     用哪一档是硬规则：作实心底 / 深底上的文字用 --sig；
+     作纸面上的文字**必须**用 --sig-paper（#fff500 压纸底只有 1.07:1，等于看不见）。 */
   --sig:#fff500;
-  --sig-deep:#e8e000;
-  --sig-paper:#6b5d00;   /* 纸上的强调色文字（#fff500 在纸底上 1.07:1，作文字不可见） */
+  --sig-rgb:255,245,0;
+  --sig-deep:#e8e000;                   /* 悬停/按下加深（实心底专用） */
+  --sig-paper:#6b5d00;                  /* 纸面上唯一合法的强调文字色 5.35:1 */
   --sig-wash:rgba(255,245,0,.35);
+  --sig-wash-soft:rgba(255,245,0,.16);
 
-  /* 状态色（不参与风格化） */
-  --err:#c0392b; --ok:#2f9e44; --warn:#b06a10;
+  /* ── 状态色（不参与风格化：错误就该是红的）── */
+  --err:#c0392b;         /* 纸面错误 4.8:1 ✓ */
+  --err-bright:#ff3b30;  /* 深底上的错误 */
+  --ok:#2f9e44;          /* 深底上的成功 / 图标 */
+  --ok-ink:#17632a;      /* 纸面上的成功文字 6.0:1 */
+  --warn:#d9822b;        /* 深底上的警告 */
+  --warn-ink:#8a5a14;    /* 纸面上的警告文字 5.2:1 */
 
-  /* 图场（黑块） */
+  /* ── 图场（黑块）── */
   --field:#17191b;
   --field-line:#3c4043;
 
+  /* ── 结构与动效 ── */
   --tb:46px;      /* 顶栏实际高度，由 JS 动态测量 */
   --ab:0px;       /* 实时桥播报条额外占的高度（它收起时为 0），由 JS 测量 */
   --tbh:calc(var(--tb) + var(--ab));  /* 所有 sticky 元素统一用的「顶栏总高」 */
+  --hit:40px;                          /* 触屏命中直径基准 */
+  --dur:180ms;                         /* 直接交互（hover/active/焦点） */
+  --dur-fast:120ms;                    /* 微反馈（信号条变色） */
+  --dur-panel:220ms;                   /* 浮层出入 */
+  --ease:cubic-bezier(.3,.7,.2,1);
   --mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,"Liberation Mono",monospace;
 }
 
@@ -79,16 +95,63 @@ input,textarea{font:inherit}
 .stats .done b{color:var(--ok)}
 .spacer{flex:1}
 
-.btn{
-  background:transparent; color:var(--ink); border:1px solid var(--ink);
-  padding:5px 13px; font-size:12px; letter-spacing:1px; transition:.12s;
+/* ══ 按钮层级 v2 ══
+   形态学自终末地/鹰角：**方形 + 强标签 + 左侧信号条或楔形 + 1px 描边**。
+   不变式：**左侧条/楔永远与按钮底反色** —— 这条保证任何状态下信号条都可读，
+   也是终末地按钮一眼可辨的原因。
+   五级：主 pri（黄底墨楔）· 次 btn（纸底黄条）· 幽灵 ghost（细描边）· 危险 danger（红）· 图标 ico */
+.btn,.btn2{
+  appearance:none; display:inline-flex; align-items:center; gap:8px;
+  background:var(--panel); color:var(--ink); border:1px solid var(--ink);
+  min-height:32px; padding:0 14px; margin:0;
+  font-size:12.5px; font-weight:600; line-height:1; letter-spacing:1px;
+  cursor:pointer; touch-action:manipulation;
+  transition:background var(--dur) var(--ease), color var(--dur) var(--ease),
+             border-color var(--dur) var(--ease), transform var(--dur-fast) var(--ease);
 }
-.btn:hover{background:var(--ink); color:var(--bg)}
-.btn.on{background:var(--sig); border-color:var(--ink); color:var(--ink); font-weight:700}
-.btn.ghost{border-color:var(--line2)}
-.btn.ghost:hover{background:var(--ink); border-color:var(--ink); color:var(--bg)}
-.btn.sm{padding:3px 9px; font-size:11.5px; letter-spacing:.6px; border-color:var(--line2)}
-.btn.sm:hover{background:var(--ink); border-color:var(--ink); color:var(--bg)}
+.btn::before,.btn2::before{
+  content:""; flex:0 0 3px; align-self:stretch; margin:4px 0;
+  background:var(--sig); transition:background var(--dur-fast) var(--ease);
+}
+.btn:hover,.btn2:hover{background:var(--ink); color:var(--bg)}
+.btn:active,.btn2:active{transform:translateY(1px)}
+
+.btn.on{background:var(--sig); color:var(--ink); font-weight:800}
+.btn.on::before{background:var(--ink)}
+.btn.on:hover{background:var(--sig-deep); color:var(--ink)}
+
+.btn.ghost{background:transparent; border-color:var(--line2); color:var(--ink2)}
+.btn.ghost::before{background:var(--line2)}
+.btn.ghost:hover{background:var(--sunk); border-color:var(--ink); color:var(--ink)}
+.btn.ghost:hover::before{background:var(--sig)}
+
+.btn.sm{min-height:28px; padding:0 10px; gap:6px; font-size:12px; letter-spacing:.5px}
+.btn.sm::before{flex-basis:2px; margin:3px 0}
+.btn.sm.ghost{border-color:var(--line2)}
+
+/* 一级·主：黄底墨字 + 墨色楔形（每个视域最多一个） */
+.btn.pri{background:var(--sig); color:var(--ink); font-weight:800; padding-left:9px}
+.btn.pri::before{
+  flex-basis:7px; margin:0 5px 0 0; background:var(--ink);
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%);
+}
+.btn.pri:hover{background:var(--sig-deep); color:var(--ink)}
+.btn.pri:active{background:var(--sig-deep)}
+
+/* 危险：透明底 + 红描边 + 红字 */
+.btn.danger{background:transparent; border-color:var(--err); color:var(--err)}
+.btn.danger::before{background:var(--err)}
+.btn.danger:hover{background:var(--err); color:#fff}
+.btn.danger:hover::before{background:#fff}
+
+/* 行内迷你文字钮 */
+.vkv .row-end button,.vcard>.hd .del,.del{
+  display:inline-flex; align-items:center; min-height:26px; padding:0 10px;
+  background:transparent; border:1px solid var(--line2); color:var(--ink2);
+  font-size:11px; letter-spacing:.5px; cursor:pointer; touch-action:manipulation;
+  transition:background var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.vkv .row-end button:hover,.vcard>.hd .del:hover,.del:hover{background:var(--err); border-color:var(--err); color:#fff}
 
 /* ── 实时桥播报条 ── */
 .aibar{position:sticky; top:var(--tb); z-index:45; display:none; align-items:center; gap:12px;  padding:7px 20px; background:var(--ink); color:var(--bg); font-size:12.5px; line-height:1.5}
@@ -131,7 +194,7 @@ input,textarea{font:inherit}
 .navitem .n{font-weight:700; color:var(--ink); min-width:20px; font-variant-numeric:tabular-nums}
 .navitem .t{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .navitem .p{font-size:10.5px; color:var(--ink3); font-family:var(--mono); letter-spacing:.5px}
-.navitem.full .p{color:var(--ok); font-weight:700}
+.navitem.full .p{color:var(--ok-ink); font-weight:700}
 
 .main{flex:1; min-width:0; width:100%; padding:22px 26px 120px}
 
@@ -200,7 +263,7 @@ input,textarea{font:inherit}
 .size:focus{background:var(--sig); color:var(--ink)}
 .tags{display:flex; gap:6px}
 .tag{
-  font-size:10px; letter-spacing:1.2px; padding:2px 7px;
+  font-size:10.5px; letter-spacing:1.2px; padding:2px 7px;
   cursor:pointer; user-select:none; border:1px solid transparent; transition:.1s;
 }
 .tag.star{background:var(--sig); color:var(--ink); font-weight:800; border-color:var(--ink)}
@@ -210,10 +273,12 @@ input,textarea{font:inherit}
 .card:hover .head-acts{opacity:1}
 .ico{
   background:transparent; border:1px solid transparent; color:var(--ink2);
-  width:24px; height:24px; display:flex; align-items:center; justify-content:center;
-  padding:0; font-size:12px; line-height:1; transition:.1s;
+  width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center;
+  padding:0; font-size:13px; line-height:1; cursor:pointer; touch-action:manipulation;
+  transition:background var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 .ico:hover{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.ico:active{background:var(--sig-deep); color:var(--ink); border-color:var(--ink)}
 .ico.del:hover{background:var(--err); border-color:var(--err); color:#fff}
 
 .card-body{display:grid; grid-template-columns:236px 1fr; gap:0}
@@ -225,7 +290,7 @@ input,textarea{font:inherit}
 .tech.sub{border-bottom:none;border-top:1px solid var(--line);margin-top:2px}
 .tc{display:flex;flex-direction:column;gap:1px;padding:4px 10px 5px;border-right:1px solid var(--line);min-width:76px;flex:1 1 auto;max-width:300px}
 .tc:last-child{border-right:none}
-.tl{font-size:9px;letter-spacing:1.4px;color:var(--ink3);font-weight:700;white-space:nowrap}
+.tl{font-size:10px;letter-spacing:1.4px;color:var(--ink3);font-weight:700;white-space:nowrap}
 .tv{font-size:12px;color:var(--ink);outline:none;white-space:pre-wrap;min-height:17px}
 .tv:focus{background:var(--sig)}
 .tv.empty:before{content:attr(data-ph);color:var(--line2)}
@@ -275,7 +340,7 @@ input,textarea{font:inherit}
 .fields{padding:11px 14px; display:flex; flex-direction:column; gap:6px}
 .f{display:grid; grid-template-columns:50px 1fr; gap:11px; align-items:start}
 .f label{
-  font-size:10px; color:var(--ink3); letter-spacing:2px;
+  font-size:10.5px; color:var(--ink3); letter-spacing:2px;
   padding-top:6px; text-align:right; font-weight:600;
 }
 .f .v{
@@ -405,16 +470,24 @@ body{
 .stats{color:#8f938c; border-left:1px solid #3a3d3f; padding-left:18px; letter-spacing:1px}
 .stats b{color:var(--bg)}
 .stats .done b{color:var(--sig)}
+/* 深底按钮：条与底反色不变式继续成立 */
 .topbar .btn{background:transparent; color:var(--bg); border-color:#4a4d49; letter-spacing:1.2px}
+.topbar .btn::before{background:var(--sig)}
 .topbar .btn:hover{background:var(--sig); color:var(--ink); border-color:var(--sig)}
+.topbar .btn:hover::before{background:var(--ink)}
 .topbar .btn.on{background:var(--sig); color:var(--ink); border-color:var(--sig); font-weight:800}
+.topbar .btn.on::before{background:var(--ink)}
 .topbar .btn.ghost{border-color:#3a3d3f; color:#b9bdb6}
+.topbar .btn.ghost::before{background:#4a4d49}
 .topbar .btn.ghost:hover{background:var(--sig); color:var(--ink); border-color:var(--sig)}
+.topbar .btn.ghost:hover::before{background:var(--ink)}
 .topbar .btn.sm{border-color:#4a4d49}
+.topbar .btn.pri{background:var(--sig); color:var(--ink); border-color:var(--sig); font-weight:800}
+.topbar .btn.pri::before{background:var(--ink)}
 .specbar{background:var(--sig); color:var(--ink); border-color:var(--sig); font-weight:800}
 .bk{background:transparent; border-color:#4a4d49; color:#c9ccc7; letter-spacing:.4px}
 .bk[data-s="ok"]{background:var(--sig); color:var(--ink); border-color:var(--sig); font-weight:800}
-.bk[data-s="warn"]{background:transparent; color:var(--sig); border-color:var(--sig); font-weight:800}
+.bk[data-s="warn"]{background:transparent; color:var(--warn); border-color:var(--warn); font-weight:800}
 /* 深底上的桥状态：已在 423 行统一定义 */
 
 /* ③ 播报条：和功能坞连成一体 */
@@ -441,7 +514,7 @@ body{
 }
 /* L1 · 段标签（模块 / 操作）—— 最重：黑底字 + 双线 */
 .side h4{
-  font:800 9.5px/1 var(--mono); letter-spacing:2.6px; text-transform:uppercase;
+  font:800 10.5px/1 var(--mono); letter-spacing:2.6px; text-transform:uppercase;
   color:var(--ink); margin:0 0 8px 14px; padding-bottom:6px;
   border-bottom:2px solid var(--ink);
 }
@@ -453,7 +526,11 @@ body{
   font:800 10px/1.5 var(--mono); letter-spacing:1.8px; color:var(--ink3);
   cursor:pointer; user-select:none;
 }
-.rail .grp:before{content:""; width:8px; height:2px; background:var(--ink3); flex:0 0 8px}
+.rail .grp::before{
+  content:""; width:8px; height:8px; flex:0 0 8px; background:var(--ink3);
+  clip-path:polygon(0 0,100% 50%,0 100%);
+  transition:background var(--dur-fast) var(--ease);
+}
 .rail .grp:hover{color:var(--ink)}
 .rail .grp:hover:before{background:var(--sig-paper)}
 .rail .grp .cnt{margin-left:auto; font:10px/1.5 var(--mono); letter-spacing:.5px; color:var(--ink3)}
@@ -485,12 +562,29 @@ body{
 .rail .subitem .sn{margin-left:auto; font:10px/1 var(--mono); color:var(--ink3)}
 .rail .navitem .n{min-width:22px}
 .rail .navitem.on .n, .rail .navitem.on .p, .rail .subitem.on .sn{color:var(--ink)}
-.rail .navitem.full .p{color:var(--ok)}
+.rail .navitem.full .p{color:var(--ok-ink)}
 /* 操作提示：悬挂缩进，折行后跟正文对齐，不跟 · 对齐 */
 .railtips{color:var(--ink3); font-size:11px; padding:0 12px 0 21px;
   line-height:1.95; letter-spacing:.2px; text-indent:-9px}
 .railtips b{color:var(--ink); font-weight:700}
 .railtips .y{color:var(--sig-paper); font-weight:700}
+
+/* 高亮标记（==文字==） */
+mark.hl{background:var(--sig); color:var(--ink); padding:0 1px}
+
+/* ── 文本工具条：聚焦任意可编辑格子时浮出来 ──
+   字号 / 字体作用于**整格**；B I U S 高亮作用于**选中的字** */
+#txtbar{position:fixed; z-index:260; display:none; gap:1px; align-items:center;
+  background:var(--ink); border:1px solid var(--ink); padding:4px;
+  box-shadow:0 3px 0 rgba(16,17,16,.16)}
+#txtbar.on{display:flex}
+#txtbar button{background:transparent; border:1px solid #4a4d49; color:#d8dad4;
+  min-width:26px; height:24px; padding:0 7px; font:11px/1 var(--mono); cursor:pointer; transition:.1s}
+#txtbar button:hover{background:var(--sig); color:var(--ink); border-color:var(--sig)}
+#txtbar button.on{background:var(--sig); color:var(--ink); border-color:var(--sig)}
+#txtbar .sep{width:1px; height:18px; background:#4a4d49; margin:0 4px; flex:0 0 1px}
+#txtbar .lb{color:#8f938c; padding:0 5px; letter-spacing:.5px; font-size:10px; white-space:nowrap}
+@media print{ #txtbar{display:none!important} }
 
 /* ⑤ 场次头：更大的段号 + 更硬的引导线 */
 .scene-head{border-bottom:2px solid var(--ink); align-items:flex-end; gap:18px}
@@ -799,8 +893,14 @@ body{
    E 档 · 头版简报 + 顶栏分组 + 键盘导航（2026-10-13）
    整段删除即回到 C++ 档。遵守封盘决议：不新增进入/揭示动画。
    ══════════════════════════════════════════════════════════ */
-/* ① 顶栏分组竖线 */
-.tsep{width:1px; align-self:stretch; background:#3a3d3f; margin:2px 1px}
+/* ① 顶栏分组竖线 → 双窄斜线（// 方向感） */
+.tsep{width:12px; align-self:stretch; background:none; position:relative; margin:2px 0}
+.tsep::before,.tsep::after{
+  content:""; position:absolute; top:22%; bottom:22%; width:2px;
+  background:#3a3d3f; transform:skewX(-32deg);
+}
+.tsep::before{left:3px}
+.tsep::after{left:8px}
 
 /* ② 项目头版：黑坞标题块压纸（title block）+ 一句话故事 + 结构条 */
 .brief{margin:0 0 28px; border:1px solid var(--ink); outline:1px solid var(--ink); outline-offset:2px;
@@ -865,6 +965,108 @@ body{
   .brief-strip .bar{background:#ccc!important}
   .brief-strip .bar i{background:#000!important}
 }
+
+/* ══════════════════════════════════════════════════════════
+   终末地对齐层 · 2026-10-13
+   依据两份规范：
+     dsh-theme-endfield/docs/design-language.md  纸与墨 + 信号黄 + 全直角
+     ark-ui-skill/references/design-language.md  组件规格 + 可达性标准
+   ══════════════════════════════════════════════════════════ */
+
+/* ── ① 圆角：全局保持 0，一个都不加 ──
+   直角不是「没设计」，是刻意的——圆角把界面推向「柔和产品」，
+   直角把它推向「技术文档 / 工程图纸」。仅两处功能性松口（2px），
+   都落在「看不见形状语言」的边缘元素上： */
+::-webkit-scrollbar-thumb{border-radius:2px}
+@media (hover:none), (pointer:coarse){ ::selection{border-radius:2px} }
+
+/* ── ② 触控反馈三件套 ──
+   iPad/Safari 上点按闪一层信号黄，等于把「点到了」这个反馈品牌化；
+   touch-action 顺手消掉移动端 300ms 双击缩放判定延迟。 */
+button,.tag,.jump,.navitem,.mitem,.subitem,.seg,.grp,.qres .qr{
+  -webkit-tap-highlight-color:rgba(255,245,0,.35);
+  touch-action:manipulation;
+}
+.navitem:active,.mitem:active,.subitem:active,.seg:active,.qres .qr:active{
+  background:var(--sig); color:var(--ink);
+}
+.tag:active{background:var(--sig); color:var(--ink)}
+
+/* ── ③ 焦点环：纸面 = 墨环，深底 = 黄环（2px + offset 1px）──
+   用 outline 而非 box-shadow：outline 不占布局、随 DPI 整数渲染，
+   在 Windows 125%/150% 缩放下不会发虚。 */
+button:focus,a:focus,input:focus,[contenteditable]:focus,[tabindex]:focus{outline:none}
+:focus-visible{outline:2px solid var(--ink); outline-offset:1px}
+.topbar :focus-visible,.aibar :focus-visible,.card-head :focus-visible,
+.vcard>.hd :focus-visible,#txtbar :focus-visible,.brief :focus-visible,
+.tableview th :focus-visible,.bkt th :focus-visible,.lb :focus-visible{
+  outline-color:var(--sig);
+}
+
+/* ── ④ 桌面命中尺寸：小步放大，密度不崩 ── */
+.vkv .acts{gap:2px}
+.vkv .acts .ico{width:26px; height:26px}
+.tbacts .ico{width:26px; height:26px}
+.vkv.has-acts{grid-template-columns:210px 1fr 84px}
+.q{width:180px; min-height:32px; padding:4px 12px; font-size:12px}
+#txtbar button{min-width:30px; height:32px; font-size:11.5px}
+.bkx{width:28px; height:28px}
+
+/* ── ⑤ 触屏档：命中目标全部 ≥40（密集表格 ≥36），并取消 hover 依赖 ──
+   平板/手机上根本没有 hover，所以原来「悬停才显形」的控件必须常显。 */
+@media (hover:none), (pointer:coarse){
+  .btn{min-height:var(--hit); padding:0 16px; font-size:13px}
+  .btn.sm{min-height:var(--hit); padding:0 14px; font-size:12.5px}
+  .ico{width:var(--hit); height:var(--hit); font-size:15px}
+  .vkv .acts .ico,.tbacts .ico{width:var(--hit); height:var(--hit)}
+  .vkv.has-acts{grid-template-columns:210px 1fr 96px}
+  .tag{min-height:32px; padding:4px 12px; font-size:11px}
+  .jump{min-height:36px; padding:6px 12px; font-size:11.5px}
+  .bkx{width:var(--hit); height:var(--hit)}
+  .vtab{min-height:var(--hit)}
+  .q{min-height:var(--hit); font-size:13px}
+  #txtbar{padding:6px; gap:2px}
+  #txtbar button{min-height:40px; min-width:40px; height:auto; font-size:12px}
+  .vkv .row-end button,.vcard>.hd .del,.del{min-height:36px; padding:0 12px; font-size:11.5px}
+  .qres .qr{padding:12px 20px}
+  .tableview th,.tableview td{padding:9px 10px}
+  .vkv .k,.vkv .v{padding:11px 12px}
+  .f .v{min-height:34px}
+  .brief-strip .seg{min-height:44px}
+  .head-acts,.add-row{opacity:1}
+  .card:hover .head-acts{opacity:1}
+  .thumb .rm{opacity:1; padding:10px 14px; font-size:12px}
+}
+
+/* ── ⑥ 几何装饰（方向词汇：切角 / 角括号）──
+   克制红线：只给品牌块与选中卡片加，不给每个容器加——
+   「clip-path 用于揭示与轮廓，不是把每个容器都做成不规则形」 */
+.mark{clip-path:polygon(0 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%)}
+.card.sel::after{
+  content:""; position:absolute; left:3px; top:3px; width:14px; height:14px;
+  border-left:2px solid var(--ink); border-top:2px solid var(--ink);
+  pointer-events:none; z-index:4;
+}
+
+/* ── ⑦ 动效层：浮层出入用「位移 + 淡入」，不用纯 opacity ── */
+.bkpanel.on,.specpanel.on,.qres.on{animation:panelIn var(--dur-panel) var(--ease)}
+@keyframes panelIn{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:none}}
+#txtbar.on{animation:panelIn var(--dur-panel) var(--ease)}
+
+/* ── ⑧ 无障碍：系统开了「减弱动态效果」时，非必要循环全停 ── */
+@media (prefers-reduced-motion:reduce){
+  .aibar .dot,.mark{animation:none}
+  .thumb:hover::after{animation:none; opacity:0}
+  .wipe,.scene-head .no,.scene-head .rule,#main,.flash{animation-duration:.01ms; animation-iteration-count:1}
+  .brief-strip .bar i{transition:none}
+  *,*::before,*::after{transition-duration:.01ms!important}
+}
+
+/* 打印：新加的装饰随打印还原，别把墨浪费在楔形上 */
+@media print{
+  .mark{clip-path:none!important}
+  .btn::before,.btn2::before{display:none!important}
+}
 </style>
 </head>
 <body>
@@ -877,7 +1079,7 @@ body{
   <button class="btn" id="bView">总表视图</button>
   <button class="btn" id="bStar">只看 ★</button>
   <span class="tsep"></span>
-  <button class="btn" id="bExp">导出工程</button>
+  <button class="btn pri" id="bExp">导出工程</button>
   <button class="btn ghost" id="bImp">导入</button>
   <span class="tsep"></span>
   <button class="btn ghost" id="bPrint">打印 / PDF</button>
@@ -888,7 +1090,7 @@ body{
   <div class="tb-right">
     <span class="specbar" id="specBar" title="点开技术规格"><span class="full">4K · 16:9 · 24fps</span><span class="short">4K</span></span>
     <span class="bk" id="bkState" data-s="off"><span class="full">备份：未开启</span><span class="short" id="bkShort">备份</span></span>
-    <button class="btn ghost" id="bReset">重置</button>
+    <button class="btn ghost danger" id="bReset">重置</button>
   </div>
   <input type="file" id="fImp" accept=".json" hidden>
 </header>
@@ -902,6 +1104,7 @@ body{
 </div>
 
 <div class="qres" id="qres"></div>
+<div id="txtbar"></div>
 
 <div class="shell">
 <aside class="side rail">
@@ -923,7 +1126,10 @@ body{
     · <span class="y">★</span> <b>⚠</b> 点一下切换标记<br>
     · 筹备·技术：行尾 <b>↑↓</b> 调序 <b>✕</b> 删<br>
     · 筹备还能 <b>＋</b> 加项 / 加表 / 加部门<br>
-    · 收藏某页：网址末尾加 <b>?view=</b>
+    · 收藏某页：网址末尾加 <b>?view=</b><br>
+    · <span class="y">点进任意格子 → 浮出文本工具条</span><br>
+    · 　字号 · 字体 · <b>B</b> <i>I</i> <u>U</u> <s>S</s> · <mark class="hl">高亮</mark><br>
+    · 　选中文字再点，只改那几个字
   </div>
 </aside>
 
@@ -2783,16 +2989,30 @@ function saveImgs(){ clearTimeout(imgSaveT); imgSaveT = setTimeout(() => { idbSe
 /* ══════════════════════════════════════════════════════════
    摄影机技术规格（存在 DOC.spec，跟着备份一起走）
    ══════════════════════════════════════════════════════════ */
-function mdLite(s){ return esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>"); }
-/* 反向：把编辑后的 HTML 变回 Markdown（保住 ** 与 ⚠，不再被吃掉） */
+/* ── 轻量富文本 ──
+   存储格式是**纯文本 + 标记**，不存 HTML（这样导出、备份、git diff 都还是人能读的）：
+     **粗**   *斜*   __下划线__   ~~删除线~~   ==高亮==
+   顺序有讲究：** 必须先吃掉，否则后面的 * 会把粗体拆坏。 */
+function mdLite(s){
+  return esc(s)
+    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replace(/__([^_]+?)__/g, "<u>$1</u>")
+    .replace(/~~([^~]+?)~~/g, "<s>$1</s>")
+    .replace(/==([^=]+?)==/g, '<mark class="hl">$1</mark>')
+    .replace(/\*([^*\n]+?)\*/g, "<i>$1</i>");
+}
+/* 反向：把编辑后的 HTML 变回标记（保住 ** 与 ⚠，不再被吃掉） */
 function htmlToMd(html){
   return String(html)
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(div|p|li)>/gi, "\n")
-    .replace(/<b[^>]*>([\s\S]*?)<\/b>/gi, "**$1**")
-    .replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, "**$1**")
-    .replace(/<(b|strong)[^>]*>/gi, "**")
-    .replace(/<\/(b|strong)>/gi, "**")
+    /* b 必须在 i 之前处理，否则 <b> 会被 i 的规则误吃 */
+    .replace(/<(b|strong)[^>]*>([\s\S]*?)<\/\1>/gi, "**$2**")
+    .replace(/<(i|em)[^>]*>([\s\S]*?)<\/\1>/gi, "*$2*")
+    .replace(/<u[^>]*>([\s\S]*?)<\/u>/gi, "__$1__")
+    .replace(/<(s|strike|del)[^>]*>([\s\S]*?)<\/\1>/gi, "~~$2~~")
+    .replace(/<mark[^>]*>([\s\S]*?)<\/mark>/gi, "==$1==")
+    .replace(/<span[^>]*background-color[^>]*>([\s\S]*?)<\/span>/gi, "==$1==")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")
     .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&")
@@ -2800,8 +3020,316 @@ function htmlToMd(html){
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
-function getSpec(){
-  if (!DOC.spec || !DOC.spec.groups){
+/* ══════════════════════════════════════════════════════════
+   文本工具：整格的「字号 / 字体」+ 选中文字的「B I U S 高亮」
+   样式不写进正文，而是存在 DOC.textStyle 这张表里（键 = 字段路径），
+   这样正文始终是干净的纯文本 + 标记，导出和 git diff 都还看得懂。
+   ══════════════════════════════════════════════════════════ */
+const FS_STEPS = [["小", "0.85"], ["正常", "1"], ["大", "1.2"], ["特大", "1.45"]];
+const FF_STEPS = [["默认", ""], ["等宽", "mono"], ["衬线", "serif"], ["楷体", "kai"]];
+const FF_CSS = {
+  "": "",
+  mono: 'ui-monospace,"SF Mono",Consolas,monospace',
+  serif: 'Georgia,"Songti SC","SimSun",serif',
+  kai: '"Kaiti SC",KaiTi,"STKaiti",serif'
+};
+function ctKey(el){
+  if (!el || !el.dataset) return null;
+  if (el.dataset.path) return el.dataset.path;
+  if (el.dataset.id && el.dataset.k) return "shot:" + el.dataset.id + ":" + el.dataset.k;
+  return null;
+}
+function ctGet(el){
+  const k = ctKey(el);
+  return (k && DOC.textStyle && DOC.textStyle[k]) || {};
+}
+function ctSet(el, patch){
+  const k = ctKey(el);
+  if (!k) return;
+  DOC.textStyle = DOC.textStyle || {};
+  const cur = Object.assign({}, DOC.textStyle[k] || {}, patch);
+  if ((!cur.fs || cur.fs === "1") && !cur.ff) delete DOC.textStyle[k];
+  else DOC.textStyle[k] = cur;
+  applyTextStyles();
+  saveDoc();
+}
+/* 渲染后统一套用（用 MutationObserver 盯着，省得每个渲染函数都改） */
+function applyTextStyles(){
+  const els = document.querySelectorAll('[contenteditable][data-path],[contenteditable][data-id][data-k]');
+  Array.prototype.forEach.call(els, function(el){
+    const st = ctGet(el);
+    if (st.fs && st.fs !== "1") el.style.fontSize = (Number(st.fs) * 100).toFixed(0) + "%";
+    else el.style.fontSize = "";
+    if (st.ff && FF_CSS[st.ff]) el.style.fontFamily = FF_CSS[st.ff];
+    else el.style.fontFamily = "";
+  });
+}
+let atTimer = null;
+function scheduleApplyStyles(){ clearTimeout(atTimer); atTimer = setTimeout(applyTextStyles, 40); }
+(function watchStyles(){
+  const ob = new MutationObserver(scheduleApplyStyles);
+  ['#main', '#v-script', '#v-bios', '#v-tech', '#v-prep'].forEach(function(sel){
+    const el = document.querySelector(sel);
+    if (el) ob.observe(el, { childList: true, subtree: true });
+  });
+})();
+
+/* ── 浮出来的文本工具条 ── */
+let tbTarget = null;
+const TBAR = document.getElementById("txtbar");
+function tbBuild(){
+  if (!TBAR || TBAR.dataset.built) return;
+  TBAR.dataset.built = "1";
+  let h = '<span class="lb">字号</span>';
+  FS_STEPS.forEach(function(s){ h += '<button data-fs="' + s[1] + '" title="整格字号：' + s[0] + '">' + s[0] + '</button>'; });
+  h += '<span class="sep"></span><span class="lb">字体</span>';
+  FF_STEPS.forEach(function(s){ h += '<button data-ff="' + s[1] + '" title="整格字体：' + s[0] + '">' + s[0] + '</button>'; });
+  h += '<span class="sep"></span><span class="lb">选中</span>';
+  h += '<button data-exec="bold" title="粗体（Ctrl+B）"><b>B</b></button>';
+  h += '<button data-exec="italic" title="斜体（Ctrl+I）"><i>I</i></button>';
+  h += '<button data-exec="underline" title="下划线（Ctrl+U）"><u>U</u></button>';
+  h += '<button data-exec="strikeThrough" title="删除线"><s>S</s></button>';
+  h += '<button data-exec="hiliteColor" title="高亮">▮</button>';
+  h += '<span class="sep"></span>';
+  h += '<button data-clip="cut" title="剪切">剪</button>';
+  h += '<button data-clip="copy" title="复制">复</button>';
+  h += '<button data-clip="paste" title="粘贴（也可用 Ctrl/⌘ + V）">粘</button>';
+  h += '<button data-clip="all" title="全选这一格">全</button>';
+  h += '<span class="sep"></span>';
+  h += '<button data-clear="1" title="清掉这一格的格式">清</button>';
+  TBAR.innerHTML = h;
+}
+function tbSync(){
+  if (!tbTarget) return;
+  const st = ctGet(tbTarget);
+  TBAR.querySelectorAll("[data-fs]").forEach(function(b){ b.classList.toggle("on", (st.fs || "1") === b.dataset.fs); });
+  TBAR.querySelectorAll("[data-ff]").forEach(function(b){ b.classList.toggle("on", (st.ff || "") === b.dataset.ff); });
+}
+/* ── 定位 ──
+   旧版按「整个格子」的矩形定位：格子一高（剧本正文那种），top 就成负数，
+   触发"翻到元素下方"的兜底 → 弹到很远的地方；格子靠顶时又钻到 Safari
+   工具栏玻璃底下。
+   现在改成按 **光标 / 选区** 定位，并用 visualViewport 夹进真正看得见的区域。 */
+function tbView(){
+  const vv = window.visualViewport;
+  return {
+    left: vv ? vv.offsetLeft : 0,
+    top: vv ? vv.offsetTop : 0,
+    w: vv ? vv.width : window.innerWidth,
+    h: vv ? vv.height : window.innerHeight
+  };
+}
+/* 顶栏（含播报条）真正占掉的高度 —— 菜单不许藏进它下面 */
+function tbGuardTop(){
+  const v = tbView();
+  const tb = document.querySelector(".topbar");
+  const ab = document.getElementById("aiBar");
+  const h = (tb ? tb.offsetHeight : 46) + ((ab && ab.classList.contains("on")) ? ab.offsetHeight : 0);
+  return v.top + h + 8;
+}
+/* 当前选区 / 光标的矩形（折叠光标也能给出位置） */
+function tbSelRect(){
+  try{
+    const s = window.getSelection();
+    if (!s || !s.rangeCount) return null;
+    const r = s.getRangeAt(0);
+    let box = r.getBoundingClientRect();
+    if (!box || (!box.height && !box.width)){
+      let n = r.startContainer;
+      if (n && n.nodeType === 3) n = n.parentElement;
+      if (n && n.getBoundingClientRect) box = n.getBoundingClientRect();
+    }
+    if (box && (box.height || box.width)) return box;
+  }catch(e){}
+  return null;
+}
+function tbPlace(anchor, atX, atY){
+  if (!tbTarget) return;
+  tbBuild();
+  TBAR.classList.add("on");
+  const v = tbView();
+  const bw = TBAR.offsetWidth || 640, bh = TBAR.offsetHeight || 34;
+  const gTop = tbGuardTop(), gBot = v.top + v.h - 8;
+  let x, y;
+  if (atX != null){                        /* 右键：就在鼠标那儿 */
+    x = atX;
+    y = (atY + bh + 6 > gBot) ? atY - bh - 4 : atY + 4;
+  } else if (anchor){                      /* 选中文字：贴在选区上方 */
+    x = anchor.left;
+    y = anchor.top - bh - 6;
+    if (y < gTop) y = anchor.bottom + 6;   /* 上面真放不下才翻到下面 */
+  } else { x = v.left + 12; y = gTop; }
+  x = Math.min(Math.max(v.left + 6, x), Math.max(v.left + 6, v.left + v.w - bw - 6));
+  y = Math.min(Math.max(gTop, y), Math.max(gTop, gBot - bh));
+  TBAR.style.left = x + "px";
+  TBAR.style.top = y + "px";
+  tbSync();
+}
+function tbHide(){ TBAR.classList.remove("on"); tbTarget = null; tbPinned = false; tbMode = null; }
+function ctSaveContent(el){
+  const txt = htmlToMd(el.innerHTML);
+  if (el.dataset.path){ setPath(el.dataset.path, txt); return; }
+  if (el.dataset.id && el.dataset.k){
+    const f = findShot(el.dataset.id);
+    if (f){ f.it[el.dataset.k] = txt; saveDoc(); }
+  }
+}
+/* 按在工具条上时别让格子失焦（否则选区就没了，加粗会落空） */
+TBAR.addEventListener("mousedown", function(e){ e.preventDefault(); });
+TBAR.addEventListener("click", function(e){
+  const el = tbTarget;
+  if (!el) return;
+  const fs = e.target.closest("[data-fs]"), ff = e.target.closest("[data-ff]");
+  const ex = e.target.closest("[data-exec]"), cl = e.target.closest("[data-clear]");
+  const cp = e.target.closest("[data-clip]");
+  if (cp){
+    const k = cp.dataset.clip;
+    const mod = /Mac|iPhone|iPad/.test(navigator.platform || "") ? "⌘" : "Ctrl";
+    try{
+      if (k === "cut"){ document.execCommand("cut"); ctSaveContent(el); }
+      else if (k === "copy"){ document.execCommand("copy"); }
+      else if (k === "all"){ document.execCommand("selectAll"); }
+      else if (k === "paste"){
+        if (navigator.clipboard && navigator.clipboard.readText){
+          navigator.clipboard.readText().then(function(t){
+            if (t) document.execCommand("insertText", false, t);
+            ctSaveContent(el);
+          }).catch(function(){ toast("浏览器没给剪贴板权限，请直接按 " + mod + "+V", true); });
+        } else toast("请直接按 " + mod + "+V 粘贴", true);
+      }
+    }catch(err){ toast("这一步没生效：" + err.message, true); }
+    return;
+  }
+  if (fs){ ctSet(el, { fs: fs.dataset.fs }); tbSync(); toast("这一格字号：" + fs.textContent); return; }
+  if (ff){ ctSet(el, { ff: ff.dataset.ff }); tbSync(); toast("这一格字体：" + ff.textContent); return; }
+  if (ex){
+    try{
+      if (ex.dataset.exec === "hiliteColor") document.execCommand("hiliteColor", false, "#fff500");
+      else document.execCommand(ex.dataset.exec, false, null);
+    }catch(err){ toast("这一步没生效：" + err.message, true); return; }
+    /* 立刻把 HTML 变回标记存起来 */
+    el.innerHTML = mdLite(htmlToMd(el.innerHTML));
+    ctSaveContent(el);
+    return;
+  }
+  if (cl){
+    try{
+      el.focus();
+      const sel = window.getSelection();
+      const rng = document.createRange();
+      rng.selectNodeContents(el);
+      sel.removeAllRanges(); sel.addRange(rng);
+      document.execCommand("removeFormat", false, null);
+    }catch(err){}
+    el.innerHTML = mdLite(htmlToMd(el.innerHTML));
+    ctSet(el, { fs: "1", ff: "" });
+    ctSaveContent(el);
+    toast("已清掉这一格的格式");
+    return;
+  }
+});
+/* ── 两种"叫出来"的方式，跟 Word 一致 ──
+   ① 选中一段文字 → 工具条浮在**选区上方**
+   ② 在格子里**右键**   → 工具条出现在**鼠标位置**（就是右键菜单）
+   单纯点进去打字**不弹**（以前那样会挡视线） */
+let tbPinned = false;   /* 右键叫出来的，不随选区变化消失 */
+let tbMode = null;      /* "mouse" = 右键叫出来的；"sel" = 选中文字叫出来的 */
+let tbTimer = null;
+function tbOwner(){
+  const el = document.activeElement;
+  if (el && el.isContentEditable && ctKey(el)) return el;
+  const s = window.getSelection();
+  if (s && s.anchorNode){
+    let n = s.anchorNode;
+    while (n && n.nodeType !== 1) n = n.parentNode;
+    while (n && !(n.isContentEditable && ctKey(n))) n = n.parentElement;
+    if (n) return n;
+  }
+  return null;
+}
+document.addEventListener("contextmenu", function(e){
+  const el = e.target;
+  if (!el || !el.isContentEditable || !ctKey(el)) return;   /* 别处保留浏览器原生菜单 */
+  e.preventDefault();
+  tbTarget = el;
+  tbPinned = true;
+  tbMode = "mouse";
+  tbPlace(null, e.clientX, e.clientY);
+});
+document.addEventListener("selectionchange", function(){
+  clearTimeout(tbTimer);
+  tbTimer = setTimeout(function(){
+    if (tbPinned) return;
+    let s;
+    try { s = window.getSelection(); } catch(err){ s = null; }
+    if (!s || !s.rangeCount || s.isCollapsed){ tbHide(); return; }   /* 没选中东西 → 不弹 */
+    const el = tbOwner();
+    if (!el){ tbHide(); return; }
+    tbTarget = el;
+    tbMode = "sel";
+    tbPlace(tbSelRect(), null, null);
+  }, 90);
+});
+/* 点别处就收起来（右键菜单和选区工具条都收） */
+document.addEventListener("mousedown", function(e){
+  if (TBAR.contains(e.target)) return;
+  if (e.target.isContentEditable && e.button === 2) return;   /* 右键时会先 contextmenu */
+  tbHide();
+});
+/* ── 位置失效时怎么办 ──
+   ⚠ 这里踩过一个坑：原来给 visualViewport 的 resize/scroll 直接绑了 tbHide，
+   而这个事件在 Safari / 无头 Chrome 里**会频繁空触发**，工具条刚定位好就被自己关掉，
+   表现为"时有时无"。现在改成：能重算就重算，算不了才收起来。 */
+function tbRefresh(){
+  if (!TBAR.classList.contains("on")) return;
+  if (tbMode === "mouse"){ tbHide(); return; }   /* 右键菜单：鼠标位置已无意义，收起 */
+  const r = tbSelRect();
+  if (r) tbPlace(r, null, null); else tbHide();
+}
+let tbRaf = null;
+function tbRefreshSoon(){
+  if (!TBAR.classList.contains("on") || tbRaf) return;
+  tbRaf = (window.requestAnimationFrame || setTimeout)(function(){ tbRaf = null; tbRefresh(); });
+}
+window.addEventListener("scroll", tbRefreshSoon, true);
+window.addEventListener("resize", tbRefreshSoon);
+if (window.visualViewport){
+  window.visualViewport.addEventListener("resize", tbRefreshSoon);
+  window.visualViewport.addEventListener("scroll", tbRefreshSoon);
+}
+document.addEventListener("keydown", function(e){ if (e.key === "Escape") tbHide(); });
+
+/* ── 粘贴净化 ──
+   从 Word / 网页粘进来的东西会带一堆 font-family、span、颜色、div 套 div。
+   我们的存储是「纯文本 + 标记」，所以粘贴时先把它过一遍 htmlToMd 洗成标记，
+   再 mdLite 渲染回来 —— 只保留 B / I / U / S / 高亮 这几种。
+   （图片粘贴是另一套逻辑：放到镜头卡片里，这里直接放行不拦） */
+document.addEventListener("paste", function(e){
+  const el = e.target;
+  if (!el || !el.isContentEditable) return;
+  const cb = e.clipboardData;
+  if (!cb) return;
+  /* 剪贴板里有图 → 交给「粘贴图片到镜头卡片」那套处理 */
+  const items = cb.items || [];
+  for (let i = 0; i < items.length; i++){ if (items[i].type && items[i].type.indexOf("image") === 0) return; }
+  const html = cb.getData("text/html");
+  const text = cb.getData("text/plain");
+  if (!html && !text) return;
+  e.preventDefault();
+  const md = html ? htmlToMd(html) : String(text);
+  const safe = mdLite(md);
+  try {
+    document.execCommand("insertHTML", false, safe);
+  } catch (err) {
+    el.innerHTML = el.innerHTML + safe;
+  }
+  /* 立刻存一次（不然等 blur 才存，中途刷新会丢） */
+  try { ctSaveContent(el); } catch (err) {}
+  const dirty = /<(font|span|div|p|table|style)[^>]*>/i.test(html || "");
+  if (dirty) toast("已清掉外来格式，只保留了粗体/斜体/下划线/高亮");
+});
+
+function getSpec(){  if (!DOC.spec || !DOC.spec.groups){
     DOC.spec = JSON.parse(JSON.stringify(DEFAULT.spec || { title: "摄影机技术规格", groups: [] }));
   }
   return DOC.spec;
@@ -3017,13 +3545,13 @@ async function renderBkPanel(){
     return;
   }
   body.innerHTML = '<p class="bkp">当前文件夹：<b>' + esc(dirHandle.name) + '</b>　'
-    + '<button class="btn sm" id="bkNow">立刻打快照</button> '
+    + '<button class="btn sm pri" id="bkNow">立刻打快照</button> '
     + '<button class="btn sm ghost" id="bkChange">换文件夹</button></p><p class="bkp">正在读取…</p>';
   document.getElementById("bkNow").onclick = () => writeHistory("手动");
   document.getElementById("bkChange").onclick = pickFolder;
   const snaps = await listSnaps();
   const head = '<p class="bkp">当前文件夹：<b>' + esc(dirHandle.name) + '</b>　'
-    + '<button class="btn sm" id="bkNow">立刻打快照</button> '
+    + '<button class="btn sm pri" id="bkNow">立刻打快照</button> '
     + '<button class="btn sm ghost" id="bkChange">换文件夹</button></p>';
   if (!snaps.length){
     body.innerHTML = head + '<p class="bkp">文件夹里还没有快照。改一下内容、或点「立刻打快照」试试。</p>';
@@ -3150,7 +3678,7 @@ function renderCards(){
       </div>
       ${items}${empty}
       <div class="add-row">
-        <button class="btn sm" data-add="shot" data-si="${si}">＋ 添加镜头</button>
+        <button class="btn sm pri" data-add="shot" data-si="${si}">＋ 添加镜头</button>
         <button class="btn sm ghost" data-add="note" data-si="${si}">＋ 添加文本块</button>
       </div>
     </section>`;
@@ -3857,6 +4385,17 @@ function mergeOldDoc(old){
   try{
     if (old.brief && old.brief.logline && (!DOC.brief || !DOC.brief.logline)){
       DOC.brief = JSON.parse(JSON.stringify(old.brief)); rep.push("简报保留");
+    }
+  }catch(e){}
+  /* ④ 字号/字体（DOC.textStyle）—— 纯用户手设的东西，必须一起搬回来，
+        否则一换版你调好的字体字号全没了 */
+  try{
+    if (old.textStyle && typeof old.textStyle === "object"){
+      const n = Object.keys(old.textStyle).length;
+      if (n){
+        DOC.textStyle = Object.assign({}, DOC.textStyle || {}, old.textStyle);
+        rep.push("字号字体设置 " + n + " 处");
+      }
     }
   }catch(e){}
 
