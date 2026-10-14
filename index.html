@@ -338,7 +338,7 @@ input,textarea{font:inherit}
 .tl{font-size:10px;letter-spacing:1.4px;color:var(--ink3);font-weight:700;white-space:nowrap}
 .tv{font-size:12px;color:var(--ink);outline:none;white-space:pre-wrap;min-height:17px}
 .tv:focus{background:var(--sig)}
-.tv.empty:before{content:attr(data-ph);color:var(--line2)}
+.tv:empty:before{content:attr(data-ph);color:var(--line2)}
 .tv.hot{color:var(--sig-paper);font-weight:800}
 .tv.hot:before{content:"▸ ";color:var(--sig-paper)}
 /* ── 技术规格 ── */
@@ -352,7 +352,7 @@ input,textarea{font:inherit}
 .spt td:first-child{width:110px;color:var(--ink3);font-size:11px;letter-spacing:1px;background:var(--sunk);white-space:nowrap}
 .spt .v{outline:none;min-height:18px;white-space:pre-wrap}
 .spt .v:focus{background:var(--sig)}
-.spt .v.empty:before{content:attr(data-ph);color:var(--line2)}
+.spt .v:empty:before{content:attr(data-ph);color:var(--line2)}
 
 /* ── 16:9 取景框 ── */
 .fr{width:100%;aspect-ratio:185/100;border:1px solid var(--field-line);background:#0c0e10;
@@ -397,7 +397,7 @@ input,textarea{font:inherit}
 .f .v:focus{background:var(--sig)}
 .f .v.light{border-left-color:var(--line2)}
 .f .v.intent{border-left-color:var(--sig); font-weight:500}
-.f .v.empty:before{content:attr(data-ph); color:var(--ink3)}
+.f .v:empty:before{content:attr(data-ph); color:var(--ink3)}
 
 /* ── 文本块 ── */
 .note{
@@ -409,7 +409,7 @@ input,textarea{font:inherit}
   white-space:pre-wrap; padding:2px 7px; max-width:112ch;
 }
 .note .v:focus{background:var(--sig); color:var(--ink)}
-.note .v.empty:before{content:attr(data-ph); color:var(--ink3)}
+.note .v:empty:before{content:attr(data-ph); color:var(--ink3)}
 
 .add-row{display:flex; gap:8px; opacity:.4; transition:.15s; margin-bottom:8px}
 .scene:hover .add-row{opacity:1}
@@ -1063,7 +1063,7 @@ body.rowdragging{cursor:grabbing; user-select:none}
   color:var(--ink); background:var(--sig); padding:1px 8px 1px 11px; white-space:nowrap}
 .brief-log .bv{flex:1; min-width:0; font-size:14.5px; line-height:1.7; color:var(--bg); outline:none; padding:0 4px}
 .brief-log .bv:focus{background:var(--sig); color:var(--ink)}
-.brief-log .bv.empty:before{content:attr(data-ph); color:#6f736c}
+.brief-log .bv:empty:before{content:attr(data-ph); color:#6f736c}
 .brief-strip{display:flex; border-top:2px solid var(--sig)}
 .brief-strip .seg{flex:1 1 0; min-width:0; padding:9px 12px 9px; cursor:pointer;
   border-right:1px solid #3a3d3f; transition:background .1s; overflow:hidden}
