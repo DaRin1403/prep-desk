@@ -1244,6 +1244,82 @@ button:focus,a:focus,input:focus,[contenteditable]:focus,[tabindex]:focus{outlin
   .mark{clip-path:none!important}
   .btn::before,.btn2::before{display:none!important}
 }
+
+/* ═══════════════ 手机端适配（≤600px）═══════════════════════════════
+   背景：手机竖屏宽 390–430px，比原有最小断点 820px 还窄。
+   原布局是「.shell = 左栏 224px + 右栏 flex」，在手机上右栏被挤出屏幕，
+   只能横向拖，且顶栏按钮挤成一团点不中。
+   处方：整体退化单列、侧栏横向滚动、顶栏换行、藏掉键盘专属内容。 */
+@media (max-width:600px){
+  /* ① 根治横向溢出 */
+  html,body{overflow-x:hidden; max-width:100vw}
+  .shell{display:block; min-height:auto}
+  .rail{width:100%; flex:none; padding:8px 10px 0}
+  .content{width:100%; min-width:0}
+
+  /* ② 左栏（模块导航）改横向滚动条，不再独占屏宽 */
+  .side.rail .side{flex-direction:row; flex-wrap:nowrap; overflow-x:auto;
+    gap:6px; padding-bottom:6px; -webkit-overflow-scrolling:touch}
+  .side.rail .side>*{flex:0 0 auto}
+
+  /* ③ 顶栏：允许换行 + 触控目标加大（手指点得中） */
+  .topbar{flex-wrap:wrap; padding:7px 10px; gap:6px; row-gap:6px}
+  .topbar .btn{padding:7px 11px; font-size:12px}
+  .topbar .q{display:none}
+  .tb-right{width:100%; margin-left:0; justify-content:flex-start;
+    gap:6px; flex-wrap:wrap}
+  .topbar .bk{max-width:none}
+
+  /* ④ 藏掉手机上没意义/放不下的元素 */
+  .spnote{display:none}          /* J/K 键等键盘操作提示 */
+  #specBar{display:none}         /* 技术规格条 */
+  .tsep{display:none}
+
+  /* ⑤ 左右分屏 → 上下堆叠，并去掉拖拽分隔条 */
+  .spl{flex-direction:column}
+  .pane{flex:1 1 auto!important; width:100%!important; max-width:none!important}
+  .splitter{display:none}
+
+  /* ⑥ 宽表格给保底宽度，改为横向滑动查看，避免压扁不可读 */
+  .tableview{overflow-x:auto; -webkit-overflow-scrolling:touch}
+  .tableview table{min-width:620px}
+
+  /* ⑦ 触屏舒适度 */
+  body{font-size:13.5px; line-height:1.65}
+  .f .v,.note .v,.vbody,.vkv .v{max-width:none}
+
+  /* ⑧ 卡片内的标签-内容两列，在极窄屏改上下排 */
+  .vkv{grid-template-columns:1fr!important}
+  .vkv .k{border-right:0; border-bottom:0; padding:6px 12px 0; font-size:10.5px}
+  .vkv .v{padding:4px 12px 10px}
+  .vkv.has-acts{grid-template-columns:1fr!important}
+
+  /* ⑨ Toast 提示框：原来 left:50% 居中且无 max-width，窄屏必然溢出。
+     改成贴左右边 + 自动换行。 */
+  .toast{
+    left:12px; right:12px; transform:none;
+    bottom:14px; padding:9px 14px;
+    font-size:12px; letter-spacing:.4px;
+    white-space:normal; text-align:center;
+  }
+  .toast.on{transform:none}
+
+  /* ⑩ 内容区留出呼吸边距，避免文字贴边 */
+  .content{padding-left:10px; padding-right:10px}
+
+  /* ⑪ 点击热区：列表行保证 ≥40px，减少误触 */
+  .rail .side a, .rail .side button{min-height:38px}
+}
+
+/* ═══ 超窄屏（≤420px，如安卓 360–412px）：进一步收紧 ═══ */
+@media (max-width:420px){
+  .topbar{padding:6px 8px; gap:5px}
+  .topbar .btn{padding:6px 9px; font-size:11.5px}
+  .rail{padding:6px 8px 0}
+  .brand{display:none}
+  .toast{font-size:11.5px; padding:8px 12px}
+  .tableview table{min-width:560px}
+}
 </style>
 </head>
 <body>
